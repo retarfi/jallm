@@ -1,1 +1,1 @@
-# camelinae
+# JaLLM: Japanese Large Language Model
