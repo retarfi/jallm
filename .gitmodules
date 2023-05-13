@@ -1,0 +1,3 @@
+[submodule "models/mpt"]
+	path = models/mpt
+	url = https://github.com/iwalton3/mpt-lora-patch.git

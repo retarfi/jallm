@@ -21,6 +21,7 @@ triton = "^2.0.0.post1"
 wandb = "^0.14.2"
 fschat = "0.2.8"
 mpi4py = "^3.1.4"
+einops = "^0.6.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.3.0"
