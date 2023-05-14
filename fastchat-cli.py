@@ -5,6 +5,7 @@ Usage:
 python3 -m fastchat.serve.cli --model ~/model_weights/llama-7b
 """
 import argparse
+import contextlib
 import os
 from typing import Callable, Optional, Tuple, Union
 from unittest.mock import patch
@@ -15,6 +16,7 @@ from fastchat.serve import cli
 from fastchat.model.model_adapter import add_model_args, load_model, MPTAdapter
 from peft import LoraConfig, set_peft_model_state_dict, get_peft_model, PeftModel
 from transformers import PreTrainedModel, PreTrainedTokenizerBase
+from unittest import mock
 
 from jallm.models.model_adapter import PatchedMPTAdapter
 
@@ -33,6 +35,18 @@ register_conv_template(
         stop_str="###",
     )
 )
+
+
+Conversation._get_prompt = Conversation.get_prompt
+Conversation._append_message = Conversation.append_message
+
+def conversation_append_message(cls, role: str, message: str):
+    cls.offset = -2
+    return cls._append_message(role, message)
+
+def conversation_get_prompt_overrider(cls: Conversation) -> str:
+    cls.messages = cls.messages[-2:]
+    return cls._get_prompt()
 
 
 def load_lora_model(
@@ -107,11 +121,15 @@ def main(
         f"max_gpu_memory: {args.max_gpu_memory}\n"
         f"load_8bit: {args.load_8bit}\n"
         f"cpu_offloading: {args.cpu_offloading}\n"
+        f"no_context: {args.no_context}\n"
         f"debug: {args.debug}"
     )
     if args.conv_template is not None:
         print(f"conv_template: {args.conv_template}")
-    cli.main(args)
+        
+    with mock.patch.object(Conversation, "get_prompt", conversation_get_prompt_overrider) if args.no_context else contextlib.nullcontext():
+        with mock.patch.object(Conversation, "append_message", conversation_append_message) if args.no_context else contextlib.nullcontext():
+            cli.main(args)
 
 
 if __name__ == "__main__":
@@ -126,7 +144,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--conv-template", type=str, default=None, help="Conversation prompt template."
     )
-    parser.add_argument("--temperature", type=float, default=0.)
+    parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument(
         "--style",
@@ -136,5 +154,6 @@ if __name__ == "__main__":
         help="Display style.",
     )
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("--no-context", action="store_true")
     args = parser.parse_args()
     main(args)
