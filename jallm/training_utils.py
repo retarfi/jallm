@@ -19,7 +19,6 @@ from peft import (
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
 from .utils.prompter import Prompter
-from .models.mpt.modeling_mpt import MPTForCausalLM
 
 
 def assert_config(params: Dict[str, Any]) -> None:
@@ -54,14 +53,14 @@ def load_model_and_tokenizer(
         )
 
     elif "mosaicml/mpt-7b" in base_model:
-        # TODO: LoRA for MPT-7B is not executable now
-        # TODO: because of MPT-7B original implementation
+        from .models.mpt.modeling_mpt import MPTForCausalLM
         config = transformers.AutoConfig.from_pretrained(
             base_model, trust_remote_code=True
         )
-        config.attn_config["attn_impl"] = "triton"
+        # triton does not work now
+        # config.attn_config["attn_impl"] = "triton"
 
-        model = transformers.AutoModelForCausalLM.from_pretrained(
+        model = MPTForCausalLM.from_pretrained(
             base_model,
             config=config,
             torch_dtype=torch.bfloat16,
@@ -71,9 +70,6 @@ def load_model_and_tokenizer(
             "EleutherAI/gpt-neox-20b"
         )
         tokenizer.pad_token_id = 1
-        raise NotImplementedError(
-            "LoRA for MPT-7B is not executable now because of MPT-7B original implementation"
-        )
     else:
         model = transformers.AutoModelForCausalLM.from_pretrained(
             base_model,
@@ -405,7 +401,7 @@ def train(
         num_train_epochs=num_epochs,
         # If set to a positive number, the total number of training steps to perform.
         # Overrides num_train_epochs.
-        max_steps=-1 if not do_only_few_steps else 5,
+        max_steps=-1 if not do_only_few_steps else 20,
         learning_rate=learning_rate,
         logging_steps=logging_steps,
         fp16=not bf16,
