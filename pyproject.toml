@@ -11,7 +11,7 @@ python = "^3.9"
 transformers = { git = "https://github.com/huggingface/transformers", rev = "7df1343292a9d75f1410cb37a99f423dcde15dae" }
 datasets = "^2.11.0"
 deepspeed = "^0.8.3"
-torch = {url = "https://download.pytorch.org/whl/cu116/torch-1.13.1%2Bcu116-cp39-cp39-linux_x86_64.whl"}
+torch = "1.13.1"
 sentencepiece = "^0.1.98"
 peft = "0.3.0"
 psutil = "^5.9.3"
