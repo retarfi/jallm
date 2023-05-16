@@ -121,6 +121,7 @@ def main(
         f"max_gpu_memory: {args.max_gpu_memory}\n"
         f"load_8bit: {args.load_8bit}\n"
         f"cpu_offloading: {args.cpu_offloading}\n"
+        f"temperature: {args.temperature}\n"
         f"no_context: {args.no_context}\n"
         f"debug: {args.debug}"
     )
