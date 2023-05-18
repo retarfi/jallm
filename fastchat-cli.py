@@ -115,6 +115,7 @@ def main(
     print(
         f"model_path: {args.model_path}\n"
         f"lora_weight: {args.lora_weight}\n"
+        f"temperature: {args.temperature}\n"
         f"max-new-tokens: {args.max_new_tokens}\n"
         f"device: {args.device}\n"
         f"num_gpus: {args.num_gpus}\n"
