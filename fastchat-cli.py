@@ -8,17 +8,17 @@ from unittest.mock import patch
 
 from fastchat.conversation import register_conv_template, Conversation, SeparatorStyle
 from fastchat.serve import cli
-from fastchat.model.model_adapter import add_model_args, MPTAdapter, model_adapters
+from fastchat.model.model_adapter import add_model_args, model_adapters
 from unittest import mock
 
-from jallm.models.model_adapter import PatchedMPTAdapter
+from jallm.models.model_adapter import PatchedMPTAdapter, LLaMAdapter
 from jallm.modeling_utils import load_lora_model
 
 
 for i, adapter in enumerate(model_adapters):
     if adapter.__class__.__name__ == "MPTAdapter":
         model_adapters[i] = PatchedMPTAdapter()
-
+model_adapters.insert(-1, LLaMAdapter())
 
 register_conv_template(
     Conversation(
