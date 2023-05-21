@@ -13,6 +13,7 @@ from fastchat.model.model_adapter import add_model_args
 from peft import PeftModel
 
 from ..modeling_utils import load_lora_model
+from ..models import model_adapter
 
 
 def main(args):
