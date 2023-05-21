@@ -2,7 +2,13 @@
 
 from fastchat.conversation import Conversation, get_conv_template
 from fastchat.model.model_adapter import BaseAdapter
-from transformers import AutoTokenizer, LlamaTokenizer, LlamaForCausalLM
+from fastchat.model.model_adapter import add_model_args, model_adapters
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    LlamaTokenizer,
+    LlamaForCausalLM,
+)
 
 from .mpt.modeling_mpt import MPTForCausalLM
 
@@ -44,3 +50,22 @@ class LLaMAdapter(BaseAdapter):
             **from_pretrained_kwargs,
         )
         return model, tokenizer
+
+
+class FastTokenizerAvailableBaseAdapter(BaseAdapter):
+    def load_model(self, model_path: str, from_pretrained_kwargs: dict):
+        try:
+            tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
+        except ValueError:
+            tokenizer = AutoTokenizer.from_pretrained(model_path)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path, low_cpu_mem_usage=True, **from_pretrained_kwargs
+        )
+        return model, tokenizer
+
+
+for i, adapter in enumerate(model_adapters):
+    if adapter.__class__.__name__ == "MPTAdapter":
+        model_adapters[i] = PatchedMPTAdapter()
+model_adapters.insert(-1, LLaMAdapter())
+model_adapters[-1] = FastTokenizerAvailableBaseAdapter()
