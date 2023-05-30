@@ -47,7 +47,7 @@ def load_lora_model(
             adapters_weights = torch.load(checkpoint_name)
             set_peft_model_state_dict(model, adapters_weights)
         else:
-            print(f"Checkpoint {checkpoint_name} not found")
+            raise ValueError(f"Checkpoint {checkpoint_name} not found")
 
     if debug:
         print(model)
