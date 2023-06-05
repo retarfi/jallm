@@ -1,8 +1,6 @@
 """
-Chat with a model with command line interface.
-
 Usage:
-python3 -m jallm.utils.convert_pytorch_to_adapter \
+python -m jallm.utils.convert_pytorch_to_adapter \
 --model ~/model_weights/llama-7b \
 --lora-weight ~/model_weights/lora_weight \
 --output-dir ~/model_weights/converted_weights
