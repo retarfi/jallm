@@ -4,7 +4,8 @@
 import json
 import os
 import sys
-from typing import Any, Dict, Tuple, Optional, List
+from functools import partial
+from typing import Any, Callable, Dict, Tuple, Optional, List
 
 import torch
 import transformers
@@ -18,7 +19,7 @@ from peft import (
 )
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
-from .utils.prompter import Prompter
+from .utils import Prompter
 
 
 def assert_config(params: Dict[str, Any]) -> None:
@@ -54,6 +55,7 @@ def load_model_and_tokenizer(
 
     elif "mosaicml/mpt-7b" in base_model:
         from .models.mpt.modeling_mpt import MPTForCausalLM
+
         config = transformers.AutoConfig.from_pretrained(
             base_model, trust_remote_code=True
         )
@@ -176,6 +178,57 @@ def prepare_deepspeed(
     else:
         deepspeed = None
     return deepspeed
+
+
+def generate_and_tokenize_prompt(
+    data_point: Dict[str, Any],
+    prompter: Prompter,
+    tokenizer: PreTrainedTokenizer,
+    cutoff_len: Optional[int],
+    train_on_inputs: bool,
+    truncation: bool = True,
+) -> Dict[str, List[int]]:
+    def tokenize(prompt: str, add_eos_token=True) -> Dict[str, List[int]]:
+        # there's probably a way to do this with the tokenizer settings
+        # but again, gotta move fast
+        result = tokenizer(
+            prompt,
+            truncation=truncation,
+            max_length=cutoff_len,
+            padding=False,
+            return_tensors=None,
+        )
+        if (
+            result["input_ids"][-1] != tokenizer.eos_token_id
+            and (cutoff_len is None or len(result["input_ids"]) < cutoff_len)
+            and add_eos_token
+        ):
+            result["input_ids"].append(tokenizer.eos_token_id)
+            result["attention_mask"].append(1)
+
+        result["labels"] = result["input_ids"].copy()
+
+        return result
+
+    full_prompt = prompter.generate_prompt(
+        data_point["instruction"],
+        data_point["input"],
+        data_point["output"],
+    )
+    tokenized_full_prompt = tokenize(full_prompt)
+    if not train_on_inputs:
+        user_prompt = prompter.generate_prompt(
+            data_point["instruction"], data_point["input"]
+        )
+        tokenized_user_prompt = tokenize(user_prompt, add_eos_token=False)
+        user_prompt_len = len(tokenized_user_prompt["input_ids"])
+
+        tokenized_full_prompt["labels"] = [
+            -100
+        ] * user_prompt_len + tokenized_full_prompt["labels"][
+            user_prompt_len:
+        ]  # could be sped up, probably
+    return tokenized_full_prompt
 
 
 def train(
@@ -333,49 +386,50 @@ def train(
         model.is_parallelizable = True
         model.model_parallel = True
 
+    # TODO: Deprecate if no problem
     # Prepare data
-    def tokenize(prompt, add_eos_token=True):
-        # there's probably a way to do this with the tokenizer settings
-        # but again, gotta move fast
-        result = tokenizer(
-            prompt,
-            truncation=True,
-            max_length=cutoff_len,
-            padding=False,
-            return_tensors=None,
-        )
-        if (
-            result["input_ids"][-1] != tokenizer.eos_token_id
-            and len(result["input_ids"]) < cutoff_len
-            and add_eos_token
-        ):
-            result["input_ids"].append(tokenizer.eos_token_id)
-            result["attention_mask"].append(1)
+    # def tokenize(prompt, add_eos_token=True):
+    #     # there's probably a way to do this with the tokenizer settings
+    #     # but again, gotta move fast
+    #     result = tokenizer(
+    #         prompt,
+    #         truncation=True,
+    #         max_length=cutoff_len,
+    #         padding=False,
+    #         return_tensors=None,
+    #     )
+    #     if (
+    #         result["input_ids"][-1] != tokenizer.eos_token_id
+    #         and len(result["input_ids"]) < cutoff_len
+    #         and add_eos_token
+    #     ):
+    #         result["input_ids"].append(tokenizer.eos_token_id)
+    #         result["attention_mask"].append(1)
 
-        result["labels"] = result["input_ids"].copy()
+    #     result["labels"] = result["input_ids"].copy()
 
-        return result
+    #     return result
 
-    def generate_and_tokenize_prompt(data_point):
-        full_prompt = prompter.generate_prompt(
-            data_point["instruction"],
-            data_point["input"],
-            data_point["output"],
-        )
-        tokenized_full_prompt = tokenize(full_prompt)
-        if not train_on_inputs:
-            user_prompt = prompter.generate_prompt(
-                data_point["instruction"], data_point["input"]
-            )
-            tokenized_user_prompt = tokenize(user_prompt, add_eos_token=False)
-            user_prompt_len = len(tokenized_user_prompt["input_ids"])
+    # def generate_and_tokenize_prompt(data_point):
+    #     full_prompt = prompter.generate_prompt(
+    #         data_point["instruction"],
+    #         data_point["input"],
+    #         data_point["output"],
+    #     )
+    #     tokenized_full_prompt = tokenize(full_prompt)
+    #     if not train_on_inputs:
+    #         user_prompt = prompter.generate_prompt(
+    #             data_point["instruction"], data_point["input"]
+    #         )
+    #         tokenized_user_prompt = tokenize(user_prompt, add_eos_token=False)
+    #         user_prompt_len = len(tokenized_user_prompt["input_ids"])
 
-            tokenized_full_prompt["labels"] = [
-                -100
-            ] * user_prompt_len + tokenized_full_prompt["labels"][
-                user_prompt_len:
-            ]  # could be sped up, probably
-        return tokenized_full_prompt
+    #         tokenized_full_prompt["labels"] = [
+    #             -100
+    #         ] * user_prompt_len + tokenized_full_prompt["labels"][
+    #             user_prompt_len:
+    #         ]  # could be sped up, probably
+    #     return tokenized_full_prompt
 
     data: Dataset
     if data_path.endswith(".json") or data_path.endswith(".jsonl"):
@@ -384,14 +438,21 @@ def train(
         data = load_dataset(data_path)
     train_data: Dataset
     val_data: Optional[Dataset]
+    prtl_generate_tokenize: Callable = partial(
+        generate_and_tokenize_prompt,
+        prompter=prompter,
+        tokenizer=tokenizer,
+        cutoff_len=cutoff_len,
+        train_on_inputs=train_on_inputs,
+    )
     if val_set_size > 0:
         train_val: Dataset = data["train"].train_test_split(
             test_size=val_set_size, shuffle=True, seed=42
         )
-        train_data = train_val["train"].shuffle().map(generate_and_tokenize_prompt)
-        val_data = train_val["test"].shuffle().map(generate_and_tokenize_prompt)
+        train_data = train_val["train"].shuffle().map(prtl_generate_tokenize)
+        val_data = train_val["test"].shuffle().map(prtl_generate_tokenize)
     else:
-        train_data = data["train"].shuffle().map(generate_and_tokenize_prompt)
+        train_data = data["train"].shuffle().map(prtl_generate_tokenize)
         val_data = None
 
     training_args = transformers.TrainingArguments(

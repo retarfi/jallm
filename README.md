@@ -37,6 +37,25 @@ poetry run python -m jallm.models.rinna_instruct_sft.cli
 ```
 Only no-context mode is available (cannot inherit old prompts).
 
+### Convert weights
+adapter_config.json must be placed (or copied) in ~/model_weights/lora_weight.
+```sh
+poetry run python -m jallm.utils.convert_pytorch_to_adapter \
+--model ~/model_weights/llama-7b \
+--lora-weight ~/model_weights/lora_weight \
+--output-dir ~/model_weights/converted_weights
+```
+
+### Evaluate model
+```sh
+poetry run python evaluate.py \
+--task {ppl-vqa, jnli} \
+--model-path decapoda-research/llama-13b-hf \
+--lora-weight lora-weights \
+--device cuda \
+--format-lang ja \
+--max-length 256
+```
 
 
 
