@@ -75,10 +75,10 @@ def main(args: argparse.Namespace) -> None:
         ds = ds.rename_columns({"prompts": "instruction", "expected": "output"})
         prompt_template_name: str
         if args.format_lang == "ja":
-            prompt_template_name = "alpaca_japanese"
+            prompt_template_name = "vqa_japanese"
         elif args.format_lang == "en":
             # The prompt template to use, will default to alpaca.
-            prompt_template_name = "alpaca"
+            prompt_template_name = "vqa"
         else:
             raise NotImplementedError(f"Invalid language: {args.format_lang}")
         prompter = Prompter(prompt_template_name)
@@ -176,7 +176,7 @@ if __name__ == "__main__":
         help="Task. 'ppl' means perplexity",
     )
     parser.add_argument(
-        "--shot", type=int, default=0, help="Number of example given in prompt"
+        "--shot", type=int, default=0, help="Number of example given in prompt. Only for tasks without ppl"
     )
     # model-path, device, gpus, num-gpus, max-gpu-memory, load-8bit, cpu-offloading
     add_model_args(parser)

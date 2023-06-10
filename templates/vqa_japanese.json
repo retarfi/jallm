@@ -1,0 +1,6 @@
+{
+    "description": "VQAで使われるテンプレート。",
+    "prompt_input": "以下の質問に答える返答を書いてください。\n\n### 質問:\n{instruction}\n\n### 入力:\n{input}\n\n### 返答:\n",
+    "prompt_no_input": "以下の質問に答える返答を書いてください。\n\n### 質問:\n{instruction}\n\n### 返答:\n",
+    "response_split": "### 返答:"    
+}
