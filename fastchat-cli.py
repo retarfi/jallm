@@ -19,7 +19,7 @@ register_conv_template(
     Conversation(
         name="japanese",
         system="以下はタスクを説明する指示です。要求を適切に満たすような返答を書いてください。\n\n",
-        roles=("### 指示", "### 返答"),
+        roles=("指示", "返答"),
         messages=(),
         offset=0,
         sep_style=SeparatorStyle.ADD_COLON_SINGLE,
