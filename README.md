@@ -72,12 +72,13 @@ poetry run python evaluate.py \
 ## Citation
 **There will be another paper. Be sure to check here again when you cite.**
 ```
-@preprint{Suzuki2023-llmj,
-  title={{日本語インストラクションデータを用いた対話可能な日本語大規模言語モデルのLoRAチューニング}},
-  author={鈴木 雅弘 and 平野 正徳 and 坂地 泰紀},
-  doi={10.51094/jxiv.422},
-  archivePrefix={Jxiv},
-  year={2023}
+@preprint{Suzuki2023-jainsttuning,
+  title={{From Base to Conversational: Japanese Instruction Dataset and Tuning Large Language Models}},
+  author={Masahiro Suzuki and Masanori Hirano and Hiroki Sakaji},
+  year={2023},
+  doi={10.48550/arXiv.2309.03412},
+  arxivId={2309.03412},
+  archivePrefix={arXiv},
 }
 ```
 
