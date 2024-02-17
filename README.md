@@ -70,7 +70,6 @@ poetry run python evaluate.py \
 
 
 ## Citation
-**There will be another paper. Be sure to check here again when you cite.**
 ```
 @preprint{Suzuki2023-jainsttuning,
   title={{From Base to Conversational: Japanese Instruction Dataset and Tuning Large Language Models}},
